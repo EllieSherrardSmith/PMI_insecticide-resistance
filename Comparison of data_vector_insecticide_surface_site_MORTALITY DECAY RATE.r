@@ -39,6 +39,8 @@ insecticide_mali  = levels(data_mali$Insecticide.Sprayed)
 
 data_mali_Ag_bend <- subset(data_mali, data_mali$Species_corrected == species_mali[1] &
                               data_mali$Insecticide.Sprayed == insecticide_mali[1]) 
+data_mali_Ag_piri <- subset(data_mali, data_mali$Species_corrected == species_mali[1] &
+                              data_mali$Insecticide.Sprayed == insecticide_mali[2]) 
 
 species_mada      = levels(data_mada$Species_corrected)
 site_mada         = levels(data_mada$Site_District_corrected)
@@ -210,9 +212,23 @@ legend(10,55,legend=c("Ambatofinandrahana","Amboasary Sud","Ankazobe","Betafo","
        lty=c(1,2,3,4,5,6),cex=1.1,pch=c(1,2,22,6,5,18))
 ## MALI
 
-mali1 <- cleaner_func(data_mali_Ag_bend,wall_surface_mali,3,site_mali,1)
-mali2 <- cleaner_func(data_mali_Ag_bend,wall_surface_mali,3,site_mali,2)
-mali3 <- cleaner_func(data_mali_Ag_bend,wall_surface_mali,3,site_mali,3)
+mali1 <- cleaner_func(data_mali_Ag_bend,wall_surface_mali,6,site_mali,2)
+mali2 <- cleaner_func(data_mali_Ag_bend,wall_surface_mali,6,site_mali,3)
+mali3 <- cleaner_func(data_mali_Ag_bend,wall_surface_mali,6,site_mali,4)
+
+cleaner_func2 <- function(datbase){
+  dat_temp <- data.frame(datbase$mortality,
+                         datbase$diff_in_days)
+  names(dat_temp) <- c("mort","time")
+  data_out <- dat_temp[order(dat_temp$time),]
+  
+  COUNTRY_site <- list(N = nrow(data_out),
+                       y = data_out$mort/100,
+                       x = data_out$time)
+  return(COUNTRY_site)  
+}
+mali1p <- cleaner_func2(data_mali_Ag_piri)
+
 
 mali_all <- list(N=c(mali1$N + mali2$N + mali3$N),
                  y = c(mali1$y,mali2$y, mali3$y),
@@ -226,26 +242,34 @@ print(test_mali)
 parm = extract(test_mali);names(parm)
 #traceplot(test_mada1, inc_warmup = TRUE)
 nc = seq(0,400,1)
-test_mali1_pred  <- (1 / (1 + mean(parm$alpha) * exp(mean(parm$beta) * nc)))
-test_mali2_pred  <- (1 / (1 + mean(parm$alpha) * exp(mean(parm$beta) * nc)))
-test_mali3_pred  <- (1 / (1 + mean(parm$alpha) * exp(mean(parm$beta) * nc)))
+#test_mali1_pred  <- (1 / (1 + mean(parm$alpha) * exp(mean(parm$beta) * nc)))
+#test_mali2_pred  <- (1 / (1 + mean(parm$alpha) * exp(mean(parm$beta) * nc)))
+#test_mali3_pred  <- (1 / (1 + mean(parm$alpha) * exp(mean(parm$beta) * nc)))
 test_mali_all_pred  <- (1 / (1 + mean(parm$alpha) * exp(mean(parm$beta) * nc)))
 
-title_obj = list("MALI",species_mali[1], wall_surface_mali[3],insecticide_mali[1])
+test_mali_p <- stan(file="C:\\Users\\Ellie\\Documents\\RStudioProjects\\PMI_insecticide-resistance\\logist_stan_decays.stan", 
+                  data=mali1p,
+                  #sample_file = "mada1_output.csv",
+                  iter=1000, chains=4)
+print(test_mali_p)
+parm = extract(test_mali_p);names(parm)
+test_mali_all_pred_p <- (1 / (1 + mean(parm$alpha) * exp(mean(parm$beta) * nc)))
 
-plot(mali1$y*100~mali1$x,
+title_obj = list("MALI",species_mali[1])
+
+plot(mali_all$y*100~mali_all$x,
      xlim = c(0,200), ylim = c(0,100),frame=FALSE,
      xlab = "Time since spraying (days)",
      ylab = "Wall Cone Bio-assay Mortality rate %",lty=2,pch=2,
-     main = print(c(title_obj[[1]],title_obj[[2]],title_obj[[3]],title_obj[[4]])))
-points(mali2$y*100~mali2$x,pch=1)
-points(mali3$y*100~mali3$x,pch=22)
+     main = print(c(title_obj[[1]],title_obj[[2]])))
+#points(mali_all$y*100~mali_all$x,pch=1)
+points(mali1p$y*100~mali1p$x,pch=22,col="blue")
 
 #lines(test_mali1_pred*100~nc)
-#lines(test_mali2_pred*100~nc,lty=2)
+lines(test_mali_all_pred_p*100~nc,lty=2,col="blue")
 lines(test_mali_all_pred*100~nc,lty=2,lwd=2)
-text(150,90,"Combined data for")
-text(150,85,"Baraouli, Bla and Koulikoro")
+text(150,15,"Bendiocarb")
+text(150,85,"Pirimiphos methyl",col="blue")
 
 
 ## ETHIOPIA with An. arabiensis
